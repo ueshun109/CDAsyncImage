@@ -17,12 +17,12 @@ struct DownSampling {
   static func perform(
     with data: Data,
     size: CGSize,
-    scale: CGFloat = 1
+    scaleFactor: CGFloat
   ) async throws -> CGImage {
     guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
       throw Error.failedToFetchImage
     }
-    let maxDimensionsInPixels = max(size.width, size.height) * scale
+    let maxDimensionsInPixels = max(size.width, size.height) * scaleFactor
     let downsampledOptions = [
       kCGImageSourceCreateThumbnailFromImageAlways: true,
       kCGImageSourceShouldCacheImmediately: true,

@@ -13,14 +13,14 @@ struct AsyncImageLoader {
   let urlCache: URLCache
   let downsampleSize: CGSize
 
-  func load() async -> AsyncImagePhase {
+  func load(with scaleFactor: CGFloat) async -> AsyncImagePhase {
     do {
       guard let urlRequest else { return .empty }
 
-      if let image = try await cachedImage(from: urlRequest, cache: urlCache) {
+      if let image = try await cachedImage(from: urlRequest, cache: urlCache, scaleFactor: scaleFactor) {
         return .success(image)
       } else {
-        let image = try await remoteImage(from: urlRequest, session: urlSession)
+        let image = try await remoteImage(from: urlRequest, session: urlSession, scaleFactor: scaleFactor)
         return .success(image)
       }
     } catch {
@@ -30,7 +30,8 @@ struct AsyncImageLoader {
 
   private func remoteImage(
     from request: URLRequest,
-    session: URLSession
+    session: URLSession,
+    scaleFactor: CGFloat
   ) async throws -> Image {
     let (data, _, metrics) = try await session.data(for: request)
     if metrics.redirectCount > 0, let lastResponse = metrics.transactionMetrics.last?.response {
@@ -39,20 +40,21 @@ struct AsyncImageLoader {
       let lastCachedResponse = CachedURLResponse(response: lastResponse, data: data)
       session.configuration.urlCache!.storeCachedResponse(lastCachedResponse, for: request)
     }
-    return try await image(with: data)
+    return try await image(with: data, scaleFactor: scaleFactor)
   }
 
   private func cachedImage(
     from request: URLRequest,
-    cache: URLCache
+    cache: URLCache,
+    scaleFactor: CGFloat
   ) async throws -> Image? {
     guard let cachedResponse = cache.cachedResponse(for: request) else { return nil }
-    return try await image(with: cachedResponse.data)
+    return try await image(with: cachedResponse.data, scaleFactor: scaleFactor)
   }
 
-  private func image(with data: Data) async throws -> Image {
+  private func image(with data: Data, scaleFactor: CGFloat) async throws -> Image {
     do {
-      let cgImage = try await DownSampling.perform(with: data, size: downsampleSize)
+      let cgImage = try await DownSampling.perform(with: data, size: downsampleSize, scaleFactor: scaleFactor)
       let uiImage = UIImage(cgImage: cgImage)
       return Image(uiImage: uiImage)
     } catch {

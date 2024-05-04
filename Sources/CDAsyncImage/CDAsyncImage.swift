@@ -9,6 +9,7 @@ import ImageIO
 import SwiftUI
 
 public struct CDAsyncImage<Content>: View where Content: View {
+  @Environment(\.displayScale) var displayScale: CGFloat
   @State private var phase: AsyncImagePhase = .empty
   private let imageLoader: AsyncImageLoader
   private let content: (AsyncImagePhase) -> Content
@@ -48,15 +49,15 @@ public struct CDAsyncImage<Content>: View where Content: View {
   public var body: some View {
     content(phase)
       .task(id: imageLoader.urlRequest) {
-        self.phase = await imageLoader.load()
+        self.phase = await imageLoader.load(with: displayScale)
       }
   }
 }
 
 #Preview {
-  let iconURL: URL? = .init(string: "")
-  let downsampleSize: CGSize = .init(width: 60, height: 60)
-  CDAsyncImage(url: iconURL, downsampleSize: downsampleSize) { phase in
+  let iconURL: URL? = .init(string: "https://via.placeholder.com/1024x1024")
+  let downsampleSize: CGSize = .init(width: 100, height: 100)
+  return CDAsyncImage(url: iconURL, downsampleSize: downsampleSize) { phase in
     switch phase {
     case .empty:
       ProgressView()
@@ -64,7 +65,8 @@ public struct CDAsyncImage<Content>: View where Content: View {
       image
         .resizable()
         .scaledToFill()
-        .frame(width: 60, height: 60)
+        .frame(width: 100, height: 100)
+        .clipShape(.circle)
     case .failure(let error):
       Text(error.localizedDescription)
     @unknown default:
